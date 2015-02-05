@@ -37,7 +37,7 @@ extern "C" {
 		return ret;                                                                \
 	}                                                                            \
 	len += ret;                                                                  \
-} while(0)                                                                     \
+} while(0)
 #endif
 
 #define MCP_ERRNO_MAP(XX)                                                      \
@@ -46,6 +46,12 @@ extern "C" {
 	XX(EBUFALLOC, "buffer allocation callback failed")                           \
 	XX(EMALLOC, "failed malloc")                                                 \
 	XX(EMEMCPY, "failed memcpy")                                                 \
+
+typedef enum {
+#define XX(code, _) MCP_ ## code,
+	MCP_ERRNO_MAP(XX)
+#undef XX
+} mcp_errno_t;
 
 typedef struct {
 	uint8_t *base;
@@ -78,7 +84,7 @@ mcp_write_sbuf(
 	__OUT__ mcp_sbuf_t *sbuf
 );
 
-typedef int (mcp_bufalloc_cb*)(uint8_t *base, size_t len);
+typedef int (*mcp_bufalloc_cb)(uint8_t *base, size_t len);
 
 int mcp_encode_int8(uint8_t num, mcp_sbuf_t *sbuf);
 int mcp_decode_int8(mcp_bbuf_t *bbuf, uint8_t *num);
@@ -106,7 +112,7 @@ int mcp_encode_str(mcp_str_t str, mcp_sbuf_t *sbuf);
 int
 mcp_decode_str(
 __IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
-__OUT__ mcp_str_t *str;
+__OUT__ mcp_str_t *str
 );
 
 /*
@@ -155,7 +161,7 @@ int mcp_decode_meta(mcp_meta_t *meta, uint8_t *buf, size_t buf_len,
 	mcp_alloc mcpalloc);
 */
 
-int mcp_encode_plen(uint8_t *buf, size_t plen, size_t buf_len);
+int mcp_encode_plen(int32_t len, mcp_sbuf_t *sbuf);
 
 //Handshake Serverbound 0x00 Handshake
 typedef struct {
@@ -272,7 +278,7 @@ mcp_decode_ls01(
 	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
 	__OUT__ mcp_ls01_t *packet
 );
-
+/*
 //Play Clientbound 0x00 Keep Alive
 typedef struct {
 	int32_t keep_alive;
@@ -293,7 +299,7 @@ typedef struct {
 
 int mcp_encode_pc01(uint8_t *buf, mcp_pc01_t *packet, size_t buf_len);
 int mcp_decode_pc01(mcp_pc01_t *packet, uint8_t *buf, size_t buf_len,
-	mcp_alloc mcpalloc);
+	mcp_bufalloc_cb mcpalloc);
 
 //Play Clientbound 0x02 Chat Message
 typedef struct {
@@ -302,7 +308,7 @@ typedef struct {
 
 int mcp_encode_pc02(uint8_t *buf, mcp_pc02_t *packet, size_t buf_len);
 int mcp_decode_pc02(mcp_pc02_t *packet, uint8_t *buf, size_t buf_len,
-	mcp_alloc mcpalloc);
+	mcp_bufalloc_cb mcpalloc);
 
 //Play Clientbound 0x03 Time Update
 typedef struct {
@@ -322,7 +328,7 @@ typedef struct {
 
 int mcp_encode_pc04(uint8_t *buf, mcp_pc04_t *packet, size_t buf_len);
 int mcp_decode_pc04(mcp_pc04_t *packet, uint8_t *buf, size_t buf_len,
-	mcp_alloc mcpalloc);
+	mcp_bufalloc_cb mcpalloc);
 
 //Play Clientbound 0x05 Spawn Position
 typedef struct {
@@ -354,7 +360,7 @@ typedef struct {
 
 int mcp_encode_pc07(uint8_t *buf, mcp_pc07_t *packet, size_t buf_len);
 int mcp_decode_pc07(mcp_pc07_t *packet, uint8_t *buf, size_t buf_len,
-	mcp_alloc mcpalloc);
+	mcp_bufalloc_cb mcpalloc);
 
 //Play Clientbound 0x08 Player Position and Look
 typedef struct {
@@ -419,8 +425,9 @@ typedef struct {
 
 int mcp_encode_pc0C(uint8_t *buf, mcp_pc0C_t *packet, size_t buf_len);
 int mcp_decode_pc0C(mcp_pc0C_t *packet, uint8_t *buf, size_t buf_len,
-	mcp_alloc mcpalloc);
+	mcp_bufalloc_cb mcpalloc);
 
+*/
 #ifdef __cplusplus
 }
 #endif

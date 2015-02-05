@@ -8,28 +8,28 @@
 
 static mcp_sc00_t status_resp = {
 	.json_response = {
-		.base = "{\"description\":\"LUVCRAFT IS ALIVE\",\"players\":{\"max\":1,\"online\":0},\"version\":{\"name\":\"1.8\",\"protocol\":47}}",
+		.base = (uint8_t *)"{\"description\":\"LUVCRAFT IS ALIVE\",\"players\":{\"max\":1,\"online\":0},\"version\":{\"name\":\"1.8\",\"protocol\":47}}",
 		.len = sizeof("{\"description\":\"LUVCRAFT IS ALIVE\",\"players\":{\"max\":1,\"online\":0},\"version\":{\"name\":\"1.8\",\"protocol\":47}}") - 1
 	}
 };
 
 static mcp_lc00_t lolnop = {
 	.reason = {
-		.base = "\"lol I'm not a real server\"",
+		.base = (uint8_t *)"\"lol I'm not a real server\"",
 		.len = sizeof("\"lol I'm not a real server\"") - 1
 	}
 };
 
 static mcp_lc00_t proto_ver_low = {
 	.reason = {
-		.base = "\"Outdated client! Please use 1.8\"",
+		.base = (uint8_t *)"\"Outdated client! Please use 1.8\"",
 		.len = sizeof("\"Outdated client! Please use 1.8\"") - 1
 	}
 };
 
 static mcp_lc00_t proto_ver_high = {
 	.reason = {
-		.base = "\"Outdated server! I'm still on 1.8\"",
+		.base = (uint8_t *)"\"Outdated server! I'm still on 1.8\"",
 		.len = sizeof("\"Outdated server! I'm still on 1.8\"") - 1
 	}
 };
@@ -44,7 +44,7 @@ typedef struct {
 	int state;
 	mcp_bbuf_t bbuf;
 	int32_t read_len;
-	uv_shutdown_t uv_shutdown_req;
+	uv_shutdown_t shutdown_req;
 	lvc_server_t *server;
 } lvc_client_t;
 
@@ -97,7 +97,7 @@ void
 lvc_client_bbuf_alloc(uv_handle_t *tcp, size_t size, uv_buf_t *buf)
 {
 	lvc_client_t *client = (lvc_client_t*)tcp->data;
-	lvc_bbuf_t *bbuf = &client->bbuf;
+	mcp_bbuf_t *bbuf = &client->bbuf;
 	if (
 		(size > bbuf->len - bbuf->used) &&
 		(size <= bbuf->len - bbuf->rem)
@@ -131,8 +131,8 @@ lvc_server_write_cb(uv_write_t *req, int status)
 void
 lvc_client_close_cb(uv_handle_t *tcp)
 {
-	client_t *client = (client_t*)tcp->data;
-	client_buf_t *client_buf = &client->client_buf;
+	lvc_client_t *client = (lvc_client_t*)tcp->data;
+	mcp_bbuf_t *client_buf = &client->bbuf;
 	free(client_buf->base);
 	free(client);
 }
@@ -144,7 +144,7 @@ lvc_client_shutdown_cb(uv_shutdown_t *req, int status)
 }
 
 void
-lvc_write_disconnect(client_t *client, mcp_lc00_t packet)
+lvc_write_disconnect(lvc_client_t *client, mcp_lc00_t packet)
 {
 	uv_write_t *req;
 	uint8_t pbuf[4096];
@@ -153,11 +153,11 @@ lvc_write_disconnect(client_t *client, mcp_lc00_t packet)
 	uv_buf_t buf = uv_buf_init(memcpy(malloc(ret), pbuf, ret), ret);
 	req = malloc(sizeof(*req));
 	req->data = buf.base;
-	uv_write(req, (uv_stream_t*)&client->tcp, &buf, 1, server_write_cb);
+	uv_write(req, (uv_stream_t*)&client->tcp, &buf, 1, lvc_server_write_cb);
 }
 
 void
-lvc_write_status(client_t *client, mcp_sc00_t packet)
+lvc_write_status(lvc_client_t *client, mcp_sc00_t packet)
 {
 	uv_write_t *req;
 	uint8_t pbuf[4096];
@@ -166,11 +166,11 @@ lvc_write_status(client_t *client, mcp_sc00_t packet)
 	uv_buf_t buf = uv_buf_init(memcpy(malloc(ret), pbuf, ret), ret);
 	req = malloc(sizeof(*req));
 	req->data = buf.base;
-	uv_write(req, (uv_stream_t*)&client->tcp, &buf, 1, server_write_cb);
+	uv_write(req, (uv_stream_t*)&client->tcp, &buf, 1, lvc_server_write_cb);
 }
 
 void
-lvc_write_ping(client_t *client, mcp_ss01_t packet)
+lvc_write_ping(lvc_client_t *client, mcp_ss01_t packet)
 {
 	uv_write_t *req;
 	uint8_t pbuf[4096];
@@ -179,7 +179,7 @@ lvc_write_ping(client_t *client, mcp_ss01_t packet)
 	uv_buf_t buf = uv_buf_init(memcpy(malloc(ret), pbuf, ret), ret);
 	req = malloc(sizeof(*req));
 	req->data = buf.base;
-	uv_write(req, (uv_stream_t*)&client->tcp, &buf, 1, server_write_cb);
+	uv_write(req, (uv_stream_t*)&client->tcp, &buf, 1, lvc_server_write_cb);
 }
 
 void
@@ -192,12 +192,12 @@ lvc_handle_handshake(lvc_client_t *client) {
 	free(handshake_packet.server_addr.base);
 	client->state = handshake_packet.next_state;
 	if (client->state == 0x02) {
-		if (phs00.protocol_version == 47) {
-			lvc_write_disconnect(client, &lolnop);
-		} else if (phs00.protocol_version > 47) {
-			lvc_write_disconnect(client, &proto_ver_high);
-		} else if (phs00.protocol_version < 47) {
-			lvc_write_disconnect(client, &proto_ver_low);
+		if (handshake_packet.protocol_version == 47) {
+			lvc_write_disconnect(client, lolnop);
+		} else if (handshake_packet.protocol_version > 47) {
+			lvc_write_disconnect(client, proto_ver_high);
+		} else if (handshake_packet.protocol_version < 47) {
+			lvc_write_disconnect(client, proto_ver_low);
 		}
 		uv_shutdown(
 			&client->shutdown_req, (uv_stream_t*)&client->tcp, lvc_client_shutdown_cb
@@ -208,7 +208,7 @@ lvc_handle_handshake(lvc_client_t *client) {
 void
 lvc_handle_ping(lvc_client_t *client) {
 	mcp_ss01_t ping_packet;
-	if (mcp_decode_ss00(&client->bbuf, &ping_packet)) {
+	if (mcp_decode_ss00(&client->bbuf, (mcp_ss00_t *) &ping_packet)) {
 		printf("Something went wrong in ping packet decode");
 		return;
 	}
@@ -220,10 +220,9 @@ lvc_server_read_cb(uv_stream_t *tcp, ssize_t nread, const uv_buf_t *buf)
 {
 	lvc_client_t *client = (lvc_client_t*)tcp->data;
 	mcp_bbuf_t *bbuf = &client->bbuf;
-	int ret;
 
 	if (nread < 0) {
-		uv_close((uv_handle_t*)&client->tcp, client_close_cb);
+		uv_close((uv_handle_t*)&client->tcp, lvc_client_close_cb);
 		return;
 	} else if (nread == 0) {
 		return;
@@ -249,7 +248,7 @@ lvc_server_read_cb(uv_stream_t *tcp, ssize_t nread, const uv_buf_t *buf)
 		if (mcp_decode_varint(bbuf, &packet_id) < 0) {
 			//Something broke
 			printf("Something has gone terribly wrong decoding packet_id");
-			uv_close((uv_handle_t*)&client->tcp, client_close_cb);
+			uv_close((uv_handle_t*)&client->tcp, lvc_client_close_cb);
 			return;
 		};
 		switch (client->state) {
@@ -259,7 +258,7 @@ lvc_server_read_cb(uv_stream_t *tcp, ssize_t nread, const uv_buf_t *buf)
 					break;
 				default:
 					printf("Invalid packet ID for handshake: %d\n", packet_id);
-					uv_close((uv_handle_t*)&client->tcp, client_close_cb);
+					uv_close((uv_handle_t*)&client->tcp, lvc_client_close_cb);
 					break;
 			} break;
 
@@ -272,7 +271,7 @@ lvc_server_read_cb(uv_stream_t *tcp, ssize_t nread, const uv_buf_t *buf)
 					break;
 				default:
 					printf("Invalid packet ID for status: %d\n", packet_id);
-					uv_close((uv_handle_t*)&client->tcp, client_close_cb);
+					uv_close((uv_handle_t*)&client->tcp, lvc_client_close_cb);
 					break;
 			} break;
 
@@ -288,15 +287,16 @@ lvc_server_read_cb(uv_stream_t *tcp, ssize_t nread, const uv_buf_t *buf)
 }
 
 void
-server_connect_cb(uv_stream_t *server_handle, int status)
+lvc_connect_cb(uv_stream_t *server_handle, int status)
 {
 	if (status != 0) {
 		printf("Connect error %s\n", uv_err_name(status));
 		return;
 	}
+	printf("Accepted a connection");
 	lvc_server_t *server = server_handle->data;
 	lvc_client_t *client = malloc(sizeof(*client));
-	lvc_client_t(server, 0, 0, client);
+	lvc_client_init(server, 0, 0, client);
 	uv_accept(server_handle, (uv_stream_t*)&client->tcp);
 	uv_read_start(
 		(uv_stream_t*)&client->tcp, lvc_client_bbuf_alloc, lvc_server_read_cb
@@ -306,9 +306,12 @@ server_connect_cb(uv_stream_t *server_handle, int status)
 int
 main(int argc, char *argv[])
 {
+	int ret;
+	printf("Running 0\n");
 	struct sockaddr_in addr;
 	lvc_server_t server;
 	uv_ip4_addr("0.0.0.0", 8000, &addr);
+	printf("Running 1\n");
 	if (lvc_server_init(uv_default_loop(), &server)) {
 		printf("Something has gone terribly wrong\n");
 		return -1;
@@ -317,9 +320,11 @@ main(int argc, char *argv[])
 		printf("Something has gone terribly wrong2\n");
 		return -1;
 	}
-	if (uv_listen((uv_stream_t*)&server.tcp, SOMAXCONN, server_connect_cb)) {
-		printf("Something has gone terribly wrong3\n");
+	ret = uv_listen((uv_stream_t*)&server.tcp, SOMAXCONN, lvc_connect_cb);
+	if (ret){
+		printf("Something has gone terribly wrong: %s\n", uv_err_name(ret));
 		return -1;
 	}
+	printf("Running 2\n");
 	return uv_run(server.loop, UV_RUN_DEFAULT);
 }

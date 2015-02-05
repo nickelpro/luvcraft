@@ -62,7 +62,7 @@ mcp_encode_int8(uint8_t num, mcp_sbuf_t *sbuf)
 int
 mcp_decode_int8(mcp_bbuf_t *bbuf, uint8_t *num)
 {
-	return mcp_recv_bbuf(bbuf, sizeof(*num), num)
+	return mcp_recv_bbuf(bbuf, sizeof(*num), num);
 }
 
 int
@@ -181,7 +181,7 @@ mcp_decode_str(
 	int ret, varint_len;
 	retchk(mcp_decode_varint(bbuf, &str->len), ret);
 	varint_len = ret;
-	errchk(buf_alloc(str->base, str->len) < 0, MCP_EBUFFALLOC);
+	errchk(buf_alloc(str->base, str->len) < 0, MCP_EBUFALLOC);
 	retchk(mcp_recv_bbuf(bbuf, str->len, str->base), ret);
 	return varint_len + str->len;
 }
@@ -440,13 +440,14 @@ int mcp_decode_meta(mcp_meta_t *meta, uint8_t *buf, size_t buf_len,
 int
 mcp_encode_plen(int32_t len, mcp_sbuf_t *sbuf)
 {
+	int ret;
 	uint8_t c[sizeof(int32_t) + 1];
 	uint8_t *pbase = sbuf->cur - len;
 	mcp_sbuf_t tbuf = mcp_sbuf_init(c, sizeof(int32_t) + 1);
-	retchk(mcp_encode_varint(len, &tbuf));
+	retchk(mcp_encode_varint(len, &tbuf), ret);
 	errchk((sbuf->len - sbuf->used) < ret, MCP_ESBUFOVERFLOW);
 	errchk(memmove(pbase + ret, pbase, len) == 0, MCP_EMEMCPY);
-	errchk(memcpy(sbuf->cur - len, tbuf, ret) == 0, MCP_EMEMCPY);
+	errchk(memcpy(sbuf->cur - len, tbuf.base, ret) == 0, MCP_EMEMCPY);
 	sbuf->cur += ret;
 	sbuf->used += ret;
 	return ret + len;

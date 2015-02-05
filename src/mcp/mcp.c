@@ -64,7 +64,7 @@ mcp_encode_sc01(mcp_sc01_t packet, mcp_sbuf_t *sbuf)
 int
 mcp_decode_sc01(mcp_bbuf_t *bbuf, mcp_sc01_t *packet)
 {
-	return mcp_decode_int64(bbuf, &packet->ping_time)
+	return mcp_decode_int64(bbuf, (uint64_t *)&packet->ping_time);
 }
 
 //Status Serverbound 0x00 Request
@@ -85,7 +85,7 @@ mcp_decode_ss00(mcp_bbuf_t *bbuf, mcp_ss00_t *packet)
 
 //Login Clientbound 0x00 Disconnect
 int
-mcp_encode_sc00(mcp_sc00_t packet, mcp_sbuf_t *sbuf)
+mcp_encode_lc00(mcp_lc00_t packet, mcp_sbuf_t *sbuf)
 {
 	int ret;
 	size_t len = 0;
@@ -95,9 +95,9 @@ mcp_encode_sc00(mcp_sc00_t packet, mcp_sbuf_t *sbuf)
 }
 
 int
-mcp_decode_sc00(
+mcp_decode_lc00(
 	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
-	__OUT__ mcp_sc00_t *packet
+	__OUT__ mcp_lc00_t *packet
 ) {
 	return mcp_decode_str(bbuf, buf_alloc, &packet->reason);
 }
@@ -643,9 +643,3 @@ int mcp_decode_pc0C(mcp_pc0C_t *packet, uint8_t *buf, size_t buf_len,
 
 }
 */
-
-#undef errchk
-#undef retchk
-#undef addchk
-#undef __IN__
-#undef __OUT__
