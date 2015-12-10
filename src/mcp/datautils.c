@@ -151,11 +151,16 @@ mcp_encode_varint(int32_t varint, mcp_sbuf_t *sbuf)
 int
 mcp_decode_varint(mcp_bbuf_t *bbuf, int32_t *varint)
 {
+	mcp_bbuf_t backup = *bbuf;
 	int ret;
 	size_t len = 0;
 	uint8_t c = 0x80;
 	for (*varint = 0; c&0x80; ++len) {
-		retchk(mcp_recv_bbuf(bbuf, sizeof(c), &c), ret);
+		ret = mcp_recv_bbuf(bbuf, sizeof(c), &c);
+		if (ret < 0) {
+			*bbuf = backup;
+			return ret;
+		}
 		*varint |= (c&0x7F)<<(len*7);
 	}
 	return len;

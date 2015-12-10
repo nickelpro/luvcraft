@@ -176,6 +176,7 @@ lvc_write_status(lvc_client_t *client, mcp_sc00_t packet)
 void
 lvc_write_ping(lvc_client_t *client, mcp_ss01_t packet)
 {
+	printf("In write ping\n");
 	uv_write_t *req;
 	uint8_t pbuf[4096];
 	mcp_sbuf_t sbuf = mcp_sbuf_init(pbuf, 4096);
@@ -213,8 +214,9 @@ lvc_handle_handshake(lvc_client_t *client) {
 
 void
 lvc_handle_ping(lvc_client_t *client) {
+	printf("In handle ping\n");
 	mcp_ss01_t ping_packet;
-	if (mcp_decode_ss00(&client->bbuf, (mcp_ss00_t *) &ping_packet) < 0) {
+	if (mcp_decode_ss01(&client->bbuf, (mcp_ss01_t *) &ping_packet) < 0) {
 		printf("Something went wrong in ping packet decode");
 		return;
 	}
@@ -227,7 +229,6 @@ lvc_server_read_cb(uv_stream_t *tcp, ssize_t nread, const uv_buf_t *buf)
 	printf("In read cb\n");
 	lvc_client_t *client = (lvc_client_t*)tcp->data;
 	mcp_bbuf_t *bbuf = &client->bbuf;
-	printf("bbuf->base: %p\n", bbuf->base);
 
 	if (nread < 0) {
 		printf("Going to close\n");
