@@ -53,6 +53,7 @@ lvc_server_init(
 	__IN__  uv_loop_t *loop,
 	__OUT__ lvc_server_t *server
 ) {
+	printf("In server init\n");
 	int ret;
 	retchk(uv_tcp_init(loop, &server->tcp), ret);
 	server->loop = loop;
@@ -65,6 +66,7 @@ lvc_client_init(
 	__IN__  lvc_server_t *server, uint8_t *buf, size_t buf_len,
 	__OUT__ lvc_client_t *client
 ) {
+	printf("In client init\n");
 	int ret;
 	retchk(uv_tcp_init(server->loop, &client->tcp), ret);
 	if ((buf_len == 0)||(buf == NULL)) {
@@ -86,44 +88,43 @@ lvc_client_init(
 }
 
 int
-lvc_server_buf_alloc(uint8_t *base, size_t len) {
-	base = malloc(len);
-	errchk(base == NULL, MCP_EMALLOC);
+lvc_server_buf_alloc(uint8_t **base, size_t len) {
+	printf("In server bufalloc, allocating: %d\n", len);
+	*base = malloc(len);
+	errchk(*base == NULL, MCP_EMALLOC);
 	return 0;
 }
 
-//TODO: This is crap, fix it
 void
 lvc_client_bbuf_alloc(uv_handle_t *tcp, size_t size, uv_buf_t *buf)
 {
+	printf("In client bufalloc\n");
 	lvc_client_t *client = (lvc_client_t*)tcp->data;
 	mcp_bbuf_t *bbuf = &client->bbuf;
 	if (
 		(size > bbuf->len - bbuf->used) &&
 		(size <= bbuf->len - bbuf->rem)
-		) {
-			memmove(bbuf->base, bbuf->cur, bbuf->rem);
-			bbuf->cur = bbuf->base;
-			bbuf->used = bbuf->rem;
-		} else if (size > bbuf->len - bbuf->rem) {
-			size_t s = ((size + bbuf->rem)/bbuf->len)+1;
-			s = s*bbuf->len;
-			uint8_t *c = memcpy(malloc(s), bbuf->cur, bbuf->rem);
-			free(bbuf->base);
-			bbuf->base = c;
-			bbuf->cur = c;
-			bbuf->len = s;
-		}
-
-		*buf = uv_buf_init(
+	) {
+		memmove(bbuf->base, bbuf->cur, bbuf->rem);
+		bbuf->cur = bbuf->base;
+		bbuf->used = bbuf->rem;
+	} else if (size > bbuf->len - bbuf->rem) {
+		memmove(bbuf->base, bbuf->cur, bbuf->rem);
+		bbuf->used = bbuf->rem;
+		bbuf->base = realloc(bbuf->base, bbuf->used + size);
+		bbuf->cur = bbuf->base;
+		bbuf->len = bbuf->used + size;
+	}
+	*buf = uv_buf_init(
 		(char*)bbuf->base + bbuf->used,
 		bbuf->len - bbuf->used
-		);
+	);
 }
 
 void
 lvc_server_write_cb(uv_write_t *req, int status)
 {
+	printf("In write_cb init\n");
 	free(req->data);
 	free(req);
 }
@@ -131,6 +132,7 @@ lvc_server_write_cb(uv_write_t *req, int status)
 void
 lvc_client_close_cb(uv_handle_t *tcp)
 {
+	printf("In client close cb\n");
 	lvc_client_t *client = (lvc_client_t*)tcp->data;
 	mcp_bbuf_t *client_buf = &client->bbuf;
 	free(client_buf->base);
@@ -146,6 +148,7 @@ lvc_client_shutdown_cb(uv_shutdown_t *req, int status)
 void
 lvc_write_disconnect(lvc_client_t *client, mcp_lc00_t packet)
 {
+	printf("In write disconnect\n");
 	uv_write_t *req;
 	uint8_t pbuf[4096];
 	mcp_sbuf_t sbuf = mcp_sbuf_init(pbuf, 4096);
@@ -159,6 +162,7 @@ lvc_write_disconnect(lvc_client_t *client, mcp_lc00_t packet)
 void
 lvc_write_status(lvc_client_t *client, mcp_sc00_t packet)
 {
+	printf("In write status\n");
 	uv_write_t *req;
 	uint8_t pbuf[4096];
 	mcp_sbuf_t sbuf = mcp_sbuf_init(pbuf, 4096);
@@ -185,12 +189,13 @@ lvc_write_ping(lvc_client_t *client, mcp_ss01_t packet)
 void
 lvc_handle_handshake(lvc_client_t *client) {
 	mcp_hs00_t handshake_packet;
-	if (mcp_decode_hs00(&client->bbuf, lvc_server_buf_alloc, &handshake_packet)) {
-		printf("Something went wrong in handshake packet decode");
+	if (mcp_decode_hs00(&client->bbuf, lvc_server_buf_alloc, &handshake_packet) < 0) {
+		printf("Something went wrong in handshake packet decode\n");
 		return;
 	}
 	free(handshake_packet.server_addr.base);
 	client->state = handshake_packet.next_state;
+	printf("Client state is: %d\n", client->state);
 	if (client->state == 0x02) {
 		if (handshake_packet.protocol_version == 47) {
 			lvc_write_disconnect(client, lolnop);
@@ -199,6 +204,7 @@ lvc_handle_handshake(lvc_client_t *client) {
 		} else if (handshake_packet.protocol_version < 47) {
 			lvc_write_disconnect(client, proto_ver_low);
 		}
+		printf("Got past write disconnect\n");
 		uv_shutdown(
 			&client->shutdown_req, (uv_stream_t*)&client->tcp, lvc_client_shutdown_cb
 		);
@@ -208,7 +214,7 @@ lvc_handle_handshake(lvc_client_t *client) {
 void
 lvc_handle_ping(lvc_client_t *client) {
 	mcp_ss01_t ping_packet;
-	if (mcp_decode_ss00(&client->bbuf, (mcp_ss00_t *) &ping_packet)) {
+	if (mcp_decode_ss00(&client->bbuf, (mcp_ss00_t *) &ping_packet) < 0) {
 		printf("Something went wrong in ping packet decode");
 		return;
 	}
@@ -218,10 +224,13 @@ lvc_handle_ping(lvc_client_t *client) {
 void
 lvc_server_read_cb(uv_stream_t *tcp, ssize_t nread, const uv_buf_t *buf)
 {
+	printf("In read cb\n");
 	lvc_client_t *client = (lvc_client_t*)tcp->data;
 	mcp_bbuf_t *bbuf = &client->bbuf;
+	printf("bbuf->base: %p\n", bbuf->base);
 
 	if (nread < 0) {
+		printf("Going to close\n");
 		uv_close((uv_handle_t*)&client->tcp, lvc_client_close_cb);
 		return;
 	} else if (nread == 0) {
@@ -233,17 +242,21 @@ lvc_server_read_cb(uv_stream_t *tcp, ssize_t nread, const uv_buf_t *buf)
 	for(;;) {
 		//If not waiting on a packet, decode next packet length
 		if (client->read_len < 0) {
-			if (mcp_decode_varint(bbuf, &client->read_len)) {
+			if (mcp_decode_varint(bbuf, &client->read_len) < 0) {
+				printf("Varint decode failed\n");
 				//Varint decode failed, wait for more data
 				client->read_len = -1;
 				break;
 			}
 		}
+		printf("Varint decode succeeded, varint is: %d\n", client->read_len);
 		if (bbuf->rem < client->read_len) {
+			printf("Not enough data\n");
 			//Not enough data to decode packet, wait for more data
 			break;
 		}
 
+		printf("Getting packet id\n");
 		int32_t packet_id;
 		if (mcp_decode_varint(bbuf, &packet_id) < 0) {
 			//Something broke
@@ -251,6 +264,7 @@ lvc_server_read_cb(uv_stream_t *tcp, ssize_t nread, const uv_buf_t *buf)
 			uv_close((uv_handle_t*)&client->tcp, lvc_client_close_cb);
 			return;
 		};
+		printf("At switch, packet id is %d\n", packet_id);
 		switch (client->state) {
 			case 0x00: switch(packet_id) {
 				case 0x00:
@@ -293,7 +307,7 @@ lvc_connect_cb(uv_stream_t *server_handle, int status)
 		printf("Connect error %s\n", uv_err_name(status));
 		return;
 	}
-	printf("Accepted a connection");
+	printf("Accepted a connection\n");
 	lvc_server_t *server = server_handle->data;
 	lvc_client_t *client = malloc(sizeof(*client));
 	lvc_client_init(server, 0, 0, client);

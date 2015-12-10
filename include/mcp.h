@@ -4,6 +4,7 @@
 extern "C" {
 #endif
 
+#include <limits.h>
 //ToDo: Comments/Documentation
 
 #ifndef __IN__
@@ -48,6 +49,7 @@ extern "C" {
 	XX(EMEMCPY, "failed memcpy")                                                 \
 
 typedef enum {
+	MCP_MAXERRNO = INT_MIN,
 #define XX(code, _) MCP_ ## code,
 	MCP_ERRNO_MAP(XX)
 #undef XX
@@ -84,7 +86,7 @@ mcp_write_sbuf(
 	__OUT__ mcp_sbuf_t *sbuf
 );
 
-typedef int (*mcp_bufalloc_cb)(uint8_t *base, size_t len);
+typedef int (*mcp_bufalloc_cb)(uint8_t **base, size_t len);
 
 int mcp_encode_int8(uint8_t num, mcp_sbuf_t *sbuf);
 int mcp_decode_int8(mcp_bbuf_t *bbuf, uint8_t *num);
@@ -111,7 +113,7 @@ int mcp_encode_str(mcp_str_t str, mcp_sbuf_t *sbuf);
 
 int
 mcp_decode_str(
-__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 __OUT__ mcp_str_t *str
 );
 
@@ -174,7 +176,7 @@ typedef struct {
 int mcp_encode_hs00(mcp_hs00_t packet, mcp_sbuf_t *sbuf);
 int
 mcp_decode_hs00(
-	__IN__  mcp_bbuf_t *mcp_bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *mcp_bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_hs00_t *packet
 );
 
@@ -186,7 +188,7 @@ typedef struct {
 int mcp_encode_sc00(mcp_sc00_t packet, mcp_sbuf_t *sbuf);
 int
 mcp_decode_sc00(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_sc00_t *packet
 );
 
@@ -223,7 +225,7 @@ typedef struct {
 int mcp_encode_lc00(mcp_lc00_t packet, mcp_sbuf_t *sbuf);
 int
 mcp_decode_lc00(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_lc00_t *packet
 );
 
@@ -237,7 +239,7 @@ typedef struct {
 int mcp_encode_lc01(mcp_lc01_t packet, mcp_sbuf_t *sbuf);
 int
 mcp_decode_lc01(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_lc01_t *packet
 );
 
@@ -250,7 +252,7 @@ typedef struct {
 int mcp_encode_lc02(mcp_lc02_t packet, mcp_sbuf_t *sbuf);
 int
 mcp_decode_lc02(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_lc02_t *packet
 );
 
@@ -262,7 +264,7 @@ typedef struct {
 int mcp_encode_ls00(mcp_ls00_t packet, mcp_sbuf_t *sbuf);
 int
 mcp_decode_ls00(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_ls00_t *packet
 );
 
@@ -275,7 +277,7 @@ typedef struct {
 int mcp_encode_ls01(mcp_ls01_t packet, mcp_sbuf_t *sbuf);
 int
 mcp_decode_ls01(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_ls01_t *packet
 );
 /*

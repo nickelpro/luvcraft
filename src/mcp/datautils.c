@@ -48,7 +48,7 @@ mcp_recv_bbuf(
 	__OUT__ uint8_t *dest
 ) {
 	errchk(bbuf->rem < len, MCP_EBBUFUNDERFLOW);
-	errchk(memcpy(dest, bbuf->cur, len) == 0, MCP_EMEMCPY);
+	memcpy(dest, bbuf->cur, len);
 	bbuf->cur += len;
 	bbuf->rem -= len;
 	return len;
@@ -152,10 +152,8 @@ int
 mcp_decode_varint(mcp_bbuf_t *bbuf, int32_t *varint)
 {
 	int ret;
-	size_t len = 1;
-	uint8_t c;
-	retchk(mcp_recv_bbuf(bbuf, sizeof(c), &c), ret);
-	*varint |= (c&0x7F)<<(len*7);
+	size_t len = 0;
+	uint8_t c = 0x80;
 	for (*varint = 0; c&0x80; ++len) {
 		retchk(mcp_recv_bbuf(bbuf, sizeof(c), &c), ret);
 		*varint |= (c&0x7F)<<(len*7);
@@ -175,13 +173,13 @@ mcp_encode_str(mcp_str_t str, mcp_sbuf_t *sbuf)
 
 int
 mcp_decode_str(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_str_t *str
 ) {
 	int ret, varint_len;
 	retchk(mcp_decode_varint(bbuf, &str->len), ret);
 	varint_len = ret;
-	errchk(buf_alloc(str->base, str->len) < 0, MCP_EBUFALLOC);
+	errchk(bufalloc(&str->base, str->len), MCP_EBUFALLOC);
 	retchk(mcp_recv_bbuf(bbuf, str->len, str->base), ret);
 	return varint_len + str->len;
 }

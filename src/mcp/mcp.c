@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include "mcp.h"
@@ -19,13 +20,13 @@ mcp_encode_hs00(mcp_hs00_t packet, mcp_sbuf_t *sbuf)
 
 int
 mcp_decode_hs00(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_hs00_t *packet
 ) {
 	int ret;
 	size_t len = 0;
 	addchk(mcp_decode_varint(bbuf, &packet->protocol_version), ret, len);
-	addchk(mcp_decode_str(bbuf, buf_alloc, &packet->server_addr), ret, len);
+	addchk(mcp_decode_str(bbuf, bufalloc, &packet->server_addr), ret, len);
 	addchk(mcp_decode_int16(bbuf, &packet->server_port), ret, len);
 	addchk(mcp_decode_varint(bbuf, &packet->next_state), ret, len);
 	return len;
@@ -44,10 +45,10 @@ mcp_encode_sc00(mcp_sc00_t packet, mcp_sbuf_t *sbuf)
 
 int
 mcp_decode_sc00(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_sc00_t *packet
 ) {
-	return mcp_decode_str(bbuf, buf_alloc, &packet->json_response);
+	return mcp_decode_str(bbuf, bufalloc, &packet->json_response);
 }
 
 //Status Clientbound 0x01 Ping
@@ -96,10 +97,10 @@ mcp_encode_lc00(mcp_lc00_t packet, mcp_sbuf_t *sbuf)
 
 int
 mcp_decode_lc00(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_lc00_t *packet
 ) {
-	return mcp_decode_str(bbuf, buf_alloc, &packet->reason);
+	return mcp_decode_str(bbuf, bufalloc, &packet->reason);
 }
 
 //Login Clientbound 0x01 Encryption Request
@@ -116,14 +117,14 @@ int mcp_encode_lc01(mcp_lc01_t packet, mcp_sbuf_t *sbuf)
 
 int
 mcp_decode_lc01(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_lc01_t *packet
 ) {
 	int ret;
 	size_t len = 0;
-	addchk(mcp_decode_str(bbuf, buf_alloc, &packet->server_id), ret, len);
-	addchk(mcp_decode_str(bbuf, buf_alloc, &packet->pub_key), ret, len);
-	addchk(mcp_decode_str(bbuf, buf_alloc, &packet->verify_token), ret, len);
+	addchk(mcp_decode_str(bbuf, bufalloc, &packet->server_id), ret, len);
+	addchk(mcp_decode_str(bbuf, bufalloc, &packet->pub_key), ret, len);
+	addchk(mcp_decode_str(bbuf, bufalloc, &packet->verify_token), ret, len);
 	return len;
 }
 
@@ -140,13 +141,13 @@ int mcp_encode_lc02(mcp_lc02_t packet, mcp_sbuf_t *sbuf)
 
 int
 mcp_decode_lc02(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_lc02_t *packet
 ) {
 	int ret;
 	size_t len = 0;
-	addchk(mcp_decode_str(bbuf, buf_alloc, &packet->uuid), ret, len);
-	addchk(mcp_decode_str(bbuf, buf_alloc, &packet->username), ret, len);
+	addchk(mcp_decode_str(bbuf, bufalloc, &packet->uuid), ret, len);
+	addchk(mcp_decode_str(bbuf, bufalloc, &packet->username), ret, len);
 	return len;
 }
 
@@ -162,10 +163,10 @@ mcp_encode_ls00(mcp_ls00_t packet, mcp_sbuf_t *sbuf)
 
 int
 mcp_decode_ls00(
-__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 __OUT__ mcp_ls00_t *packet
 ) {
-	return mcp_decode_str(bbuf, buf_alloc, &packet->name);
+	return mcp_decode_str(bbuf, bufalloc, &packet->name);
 }
 
 //Login Serverbound 0x01 Encryption Response
@@ -181,13 +182,13 @@ mcp_encode_ls01(mcp_ls01_t packet, mcp_sbuf_t *sbuf) {
 
 int
 mcp_decode_ls01(
-	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb buf_alloc,
+	__IN__  mcp_bbuf_t *bbuf, mcp_bufalloc_cb bufalloc,
 	__OUT__ mcp_ls01_t *packet
 ) {
 	int ret;
 	size_t len = 0;
-	addchk(mcp_decode_str(bbuf, buf_alloc, &packet->shared_secret), ret, len);
-	addchk(mcp_decode_str(bbuf, buf_alloc, &packet->verify_token), ret, len);
+	addchk(mcp_decode_str(bbuf, bufalloc, &packet->shared_secret), ret, len);
+	addchk(mcp_decode_str(bbuf, bufalloc, &packet->verify_token), ret, len);
 	return len;
 }
 
